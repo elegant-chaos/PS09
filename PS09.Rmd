@@ -1,6 +1,6 @@
 ---
 title: "STAT/MATH 495: Problem Set 09"
-author: "WRITE YOUR NAME(S) HERE"
+author: "Jenn Halbleib"
 date: "2017-11-07"
 output:
   html_document:
@@ -25,9 +25,9 @@ library(tidyverse)
 
 # Collaboration
 
-Please indicate who you collaborated with on this assignment: 
+Please indicate who you collaborated with on this assignment:  
 
-
+CI using dplyr: https://stackoverflow.com/questions/35953394/calculating-length-of-95-ci-using-dplyr
 
 # Question 1: Run k-means
 
@@ -58,24 +58,99 @@ ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
   geom_point(data=cluster_centers, size=5)
 ```
 
-**Questions**:
+**Questions and Answers**:
 
 1. Run KMC 10 times on `observations_1` and comment on the consistency of the
 results.
+
+```{r}
+#Visualizing observations_1
+ggplot(NULL, aes(x=x1, y=x2)) + 
+  geom_point(data=observations_1, alpha = 0.5) +
+  ggtitle("Distribution of observations_1")
+
+#Writing a funtion to run k-means and return the center of each cluster
+fit_kmeans <- function (k=2, data = observations_1){
+k_means_results <- kmeans(data, centers=k)
+clusters <- k_means_results$cluster
+cluster_centers <- k_means_results$centers
+}
+
+#Running k-means on observations_1
+results <- mosaic::do(10)*fit_kmeans()
+
+#Plotting the results against the original observations
+ggplot(NULL, aes(x=x1, y=x2)) +
+  geom_point(data=results, color = "midnightblue", fill = "lightskyblue3", pch = 21, size = 7, alpha = 0.7) + 
+  geom_point(data=observations_1, alpha = 0.5) +
+  ggtitle("K Means Clustering on observations_1")
+
+```
+
+As displayed in the plot, the center of each cluster moves from analysis to analysis. To assess how much the center moves, first we have to differentiate the centers of each cluster for each time the algorithm was run (since k-means randomly assigns an identifier to each cluster).
+
+```{r}
+#The plot shows that cluster1 corresponds to x1 < 1.0
+cluster1 <- results %>% filter(x1 < 1.0)
+cluster2 <- results %>% filter(x2 > 1.0)
+
+#Here, I'm thinking the CI will come from the pythagorean distance x1^2 + x2^2
+cluster1_CI <- cluster1 %>% mutate(center = x1^2 + x2^2) %>%
+  summarise(mean = mean(center), sd = sd(center))
+cluster1_CI
+cluster2_CI <- cluster2 %>% mutate(center = x1^2 + x2^2) %>%
+  summarise(mean = mean(center), sd = sd(center))
+cluster2_CI
+```
+
+So, we can see that each cluster center falls inside a confidence interval. Since neither cluster's center has a standard deviation much greater than 10% of its total mean, k-means seems to do a reasonable job of estimating cluster center. 
+
 1. Speculate on the root cause of any consistency or inconsistency in the
 results.
+
+Looking at the distribution of observations_1, the spread of the data doesn't really lend itself to clustering. The points are pretty evenly distributed throughout the ranges of x1 and x2.  
+
 1. Run KMC 10 times on `observations_2` and comment on the consistentcy of the
 results.
+
+```{r}
+#Visualizing observations_2
+ggplot(NULL, aes(x=x1, y=x2)) + 
+  geom_point(data=observations_2, alpha = 0.5) +
+  ggtitle("Distribution of observations_2")
+
+#Running k-means on observations_2
+results2 <- mosaic::do(10)*fit_kmeans(data = observations_2)
+
+#Plotting the results against the original observations
+ggplot(NULL, aes(x=x1, y=x2)) +
+  geom_point(data=results2, color = "midnightblue", fill = "lightskyblue3", pch = 21, size = 7, alpha = 0.7) + 
+  geom_point(data=observations_2, alpha = 0.5) +
+  ggtitle("K Means Clustering on observations_2")
+
+```
+
+In this case, k-means appears to pick the same point every time as the center. We can verify by finding the CI for each cluster's center.
+```{r}
+#The plot shows that cluster1 corresponds to x1 < 1.0
+cluster1 <- results2 %>% filter(x1 < 1.0)
+cluster2 <- results2 %>% filter(x2 > 1.0)
+
+#Here, I'm thinking the CI will come from the pythagorean distance x1^2 + x2^2
+cluster1_CI <- cluster1 %>% mutate(center = x1^2 + x2^2) %>%
+  summarise(mean = mean(center), sd = sd(center))
+cluster1_CI
+cluster2_CI <- cluster2 %>% mutate(center = x1^2 + x2^2) %>%
+  summarise(mean = mean(center), sd = sd(center))
+cluster2_CI
+```
+
+Notice the sd is 0 in this case, meaning that the k-means algorithm finds the same center each time it's run.
+
 1. Speculate on the root cause of any consistency or inconsistency in the
 results.
 
-**Answers**:
-
-1.
-1.
-1.
-1.
-
+From the plot of the data, we can see the points are naturally clustered. In this case, k-means is well suited to the data and works consistently.
 
 
 # Bonus question: Code your own
